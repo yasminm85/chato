@@ -1,7 +1,6 @@
 import express from 'express'
 import { verifyEmail ,register, login, logout, verifyOtp,googleLogin, sendResetOtp, resetPassword, users, updateProfile, getDataById, blockUser } from '../controllers/authController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
-import { use } from 'react';
 import rateLimit from 'express-rate-limit';
 
 const authRouter = express.Router();
