@@ -9,7 +9,7 @@ import { getNames } from 'country-list';
 import { getCodeList } from 'country-list';
 import axios from 'axios';
 
-export default function SignupPage() {
+export default function SignUpPage() {
   const navigate = useNavigate();
   const countries = getNames();
   const countryObject = getCodeList();
