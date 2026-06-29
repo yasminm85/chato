@@ -4,7 +4,7 @@ import { Navbar, Footer } from './components/Layouts.jsx';
 import { AuthContext, AuthProvider } from './context/AuthContext.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
-import SignupPage from './pages/SignupPage.jsx';
+import SignUpPage from './pages/SignupPage.jsx';
 import ChatPage from './pages/ChatPage.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import VerifyEmail from './pages/VerifyEmail.jsx';
@@ -61,7 +61,7 @@ export default function App() {
             <Route
               path="/signup"
               element={
-                  <SignupPage />
+                  <SignUpPage />
               }
             />
 
