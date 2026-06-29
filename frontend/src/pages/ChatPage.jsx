@@ -4,11 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { useContext } from 'react';
 import { io } from 'socket.io-client';
+import LogoChato from '../assets/landingpage/logo_chato.svg';
 import axios from 'axios';
+import { CgProfile } from 'react-icons/cg';
+import { RiLogoutCircleLine } from 'react-icons/ri';
+import { CiMenuKebab } from 'react-icons/ci';
+import { gooeyToast } from 'goey-toast';
+import { NeoConfirmAlert } from '../components/Alert.jsx';
+import DOMPurify from 'dompurify';
 
 export default function ChatPage() {
   const navigate = useNavigate();
-  const { user, handleLogout } = useContext(AuthContext);
+  const { user, handleLogout, token } = useContext(AuthContext);
   const myId = user?.id || user?._id;
   const [msgs, setMsgs] = useState([]);
   const [draft, setDraft] = useState('');
@@ -24,6 +31,13 @@ export default function ChatPage() {
   const [pendingMsgs, setPendingMsgs] = useState({});
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    age: '',
+    gender: '',
+    country: '',
+  });
 
   const executeLogout = () => {
     handleLogout();
@@ -47,6 +61,30 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      if (!myId) return;
+
+      try {
+        const response = await axios.get(
+          `http://localhost:4000/api/auth/getUser/${myId}`,
+        );
+        const userData = response.data.user || response.data;
+
+        setFormData({
+          username: userData.username || '',
+          age: userData.age || '',
+          gender: userData.gender || 'Male',
+          country: userData.country || '',
+        });
+      } catch (error) {
+        console.error('Failed to fetch data');
+      }
+    };
+
+    fetchProfile();
+  }, [myId]);
+
+  useEffect(() => {
     const fetchMessages = async () => {
       if (!myId || !selectedUser) return;
 
@@ -65,7 +103,11 @@ export default function ChatPage() {
   }, [selectedUser]);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:4000');
+    const newSocket = io('http://localhost:4000', {
+      auth: {
+        token: localStorage.getItem('token'),
+      },
+    });
     setSocket(newSocket);
 
     return () => newSocket.disconnect();
@@ -78,7 +120,6 @@ export default function ChatPage() {
       const senderId = data.isAi ? selectedUser?.id : data.senderId;
 
       if (blockedUsers.includes(senderId)) {
-        console.log(`Pesan dari ${senderId} diblokir.`);
         return;
       }
 
@@ -143,6 +184,33 @@ export default function ChatPage() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [msgs]);
 
+  useEffect(() => {
+    const fetchBlockedUsers = async () => {
+      if (!myId) return;
+      try {
+        const response = await axios.get(
+          `http://localhost:4000/api/auth/getUser/${myId}`,
+        );
+        const userData = response.data.user || response.data;
+
+        const rawIds = userData.blockedUser;
+
+        const cleanBlockedList = Array.isArray(rawIds)
+          ? rawIds
+          : rawIds
+            ? [rawIds]
+            : [];
+
+        const cleanIds = cleanBlockedList.map((id) => id.toString());
+        setBlockedUsers(cleanIds);
+      } catch (error) {
+        console.error('Failed to fetch blocked users', error);
+      }
+    };
+
+    fetchBlockedUsers();
+  }, [myId]);
+
   const getInitials = (name) => {
     if (!name) return '??';
     const names = name.trim().split(' ');
@@ -184,25 +252,56 @@ export default function ChatPage() {
   };
 
   const handleDeleteMsgs = async () => {
-    if(!window.confirm(`Are sure want to delte chat with ${selectedUser.name} ?`)) return;
-
     try {
-      const response = await axios.delete(`http://localhost:4000/api/msgs/${myId}/${selectedUser.id}`);
+      const response = await axios.delete(
+        `http://localhost:4000/api/msgs/${myId}/${selectedUser.id}`,
+      );
       setMsgs([]);
       setIsMenuOpen(false);
     } catch (error) {
-       console.error('Failed delete message', error);
+      console.error('Failed delete message', error);
     }
-  }
+  };
+
+  const handleBlockUser = async (targetUserId) => {
+    const targetIdStr = targetUserId.toString();
+    const isAlreadyBlocked = blockedUsers
+      .map((id) => id.toString())
+      .includes(targetIdStr);
+
+    try {
+      await axios.post(
+        'http://localhost:4000/api/auth/block',
+        { targetedId: targetUserId },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (isAlreadyBlocked) {
+        setBlockedUsers((prev) =>
+          prev.filter((id) => id.toString() !== targetIdStr),
+        );
+        gooeyToast.success('User unblocked successfully');
+      } else {
+        setBlockedUsers((prev) => [...prev, targetIdStr]);
+        gooeyToast.success('User blocked successfully');
+      }
+    } catch (err) {
+      console.error('ERROR:', err.message);
+      gooeyToast.error('Failed to update block status');
+    }
+  };
 
   const colors = [C.bluePale, '#D6F5E8', C.yellow, '#FFD1DC', '#E0C3FC'];
   const getBgColor = (index) => colors[index % colors.length];
 
   const getFlagEmoji = (countryCode) => {
-            if(!countryCode) return '🌐';
-             const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt(0));
-             return String.fromCodePoint(...codePoints);
-    };
+    if (!countryCode) return '';
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map((char) => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
 
   const friendList = (Array.isArray(allUsers) ? allUsers : [])
     .filter((u) => {
@@ -215,6 +314,9 @@ export default function ChatPage() {
       return {
         id: dbUserId,
         name: u.username,
+        age: u.age,
+        gender: u.gender,
+        country: u.country,
         ini: getInitials(u.username),
         bg: getBgColor(index),
         on: onlineUsers.includes(dbUserId),
@@ -222,106 +324,36 @@ export default function ChatPage() {
       };
     });
 
-    
-
-    
-
   return (
-    <div
-      style={{
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: C.paper,
-        overflow: 'hidden',
-      }}>
-      {/* app header */}
-      <header
-        style={{
-          borderBottom: `3px solid ${C.ink}`,
-          padding: '0 24px',
-          flexShrink: 0,
-        }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            height: 56,
-            maxWidth: 1200,
-            margin: '0 auto',
-          }}>
+    <div className="h-screen flex flex-col bg-[#FFC0CB] overflow-hidden">
+      <header className="border-b-3 border-[#0D0C0C] px-6 shrink-0 bg-[#FDF2E9]">
+        <div className="flex items-center justify-between h-14 max-w-[1200px] mx-auto">
           <button
-            className="sg"
             onClick={() => navigate('/chat')}
-            style={{
-              fontSize: 18,
-              fontWeight: 800,
-              letterSpacing: '-.03em',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: C.ink,
-            }}>
+            className="font-sg text-[18px] font-extrabold tracking-tight bg-transparent border-none cursor-pointer text-[#0D0C0C] hover:opacity-80 transition-opacity">
             Chato
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div
-              className="dm"
-              style={{ fontSize: 12, color: '#555' }}>
-              <span style={{ fontWeight: 700, color: C.blue }}>
-                {user.displayName || user.username}
+
+          <div className="flex items-center gap-4">
+            <div className="font-dm text-[12px] text-gray-600">
+              <span className="font-bold text-[#0D0C0C]">
+                {formData.username}
               </span>
-              {user.age &&
-                ` (${user.gender ? user.gender[0] : ''}, ${user.age}y)`}
             </div>
           </div>
         </div>
       </header>
 
-      {/* main */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          gap: 20,
-          padding: '20px 24px',
-          overflow: 'hidden',
-          maxWidth: 1200,
-          margin: '0 auto',
-          width: '100%',
-        }}>
-        {/* sidebar */}
-        <aside
-          style={{
-            width: 220,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-          }}>
-          <div
-            className="nb"
-            style={{
-              padding: 16,
-              background: C.white,
-              flex: 1,
-              overflowY: 'auto',
-            }}>
-            <div
-              className="dm"
-              style={{
-                fontSize: 10,
-                letterSpacing: '.1em',
-                color: '#999',
-                marginBottom: 10,
-              }}>
-              Online Friends
+      <div className="flex-1 flex gap-5 p-5 overflow-hidden max-w-[1200px] mx-auto w-full">
+        <aside className="w-[220px] shrink-0 flex flex-col gap-4">
+          <div className="p-4 bg-[#F8D6B3] border-2 border-[#0D0C0C] shadow-[3px_3px_0_0_] flex-1 overflow-y-auto rounded-sm">
+            <div className="font-dm text-[10px] tracking-widest text-gray-400 mb-2.5 font-bold uppercase">
+              Friends
             </div>
+
             {friendList.map((u) => (
               <button
                 key={u.id}
-                className="side-btn"
                 onClick={() => {
                   setSelectedUser(u);
                   setUnreadCounts((prev) => ({ ...prev, [u.id]: 0 }));
@@ -330,81 +362,43 @@ export default function ChatPage() {
                     setPendingMsgs((prev) => ({ ...prev, [u.id]: [] }));
                   }
                 }}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                  }}>
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                className={`w-full flex justify-between items-center p-2 mb-2 border-2 border-[#0D0C0C] rounded-sm bg-[#FDFD96] shadow-[2px_2px_0_0_#0D0C0C] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all text-left ${
+                  selectedUser?.id === u.id ? '' : ''
+                }`}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="relative shrink-0">
                     <div
-                      style={{
-                        width: 30,
-                        height: 30,
-                        background: u.bg,
-                        border: `2px solid ${C.ink}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontFamily: 'Space Grotesk',
-                        fontWeight: 700,
-                        fontSize: 11,
-                      }}>
+                      style={{ background: u.bg }}
+                      className="w-[30px] h-[30px] border-2 border-[#0D0C0C] flex items-center justify-center font-sg font-bold text-[11px] text-[#0D0C0C]">
                       {u.ini}
                     </div>
                     <div
-                      style={{
-                        position: 'absolute',
-                        bottom: -1,
-                        right: -1,
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        background: u.on ? C.green : C.grayMid,
-                        border: '1.5px solid white',
-                      }}
+                      className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${
+                        u.on ? 'bg-[#00C27C]' : 'bg-[#B8B2AA]'
+                      }`}
                     />
                   </div>
 
-                  <span style={{ fontSize: 13, fontWeight: 'bold' }}>
+                  <span className="text-[13px] font-bold text-[#0D0C0C] font-dm truncate flex items-center gap-1">
                     {u.name}
-                    <span style={{ fontSize: 16 }}>{u.flag}</span>
+                    <span className="text-[16px]">{u.flag}</span>
                   </span>
                 </div>
 
                 {unreadCounts[u.id] > 0 && (
-                  <span
-                    style={{
-                      background: '#FF4500',
-                      color: '#FFF',
-                      border: '2px solid #000',
-                      borderRadius: '50%',
-                      padding: '2px 6px',
-                      fontWeight: '900',
-                      fontSize: '11px',
-                      boxShadow: '2px 2px 0px #000',
-                    }}>
+                  <span className="bg-[#FF4500] text-white border-2 border-[#0D0C0C] rounded-full px-1.5 py-0.5 font-black text-[11px] shadow-[2px_2px_0_0_#0D0C0C]">
                     {unreadCounts[u.id]}
                   </span>
                 )}
               </button>
             ))}
-            <div
-              style={{
-                borderTop: `2px solid ${C.ink}`,
-                marginTop: 12,
-                paddingTop: 10,
-              }}>
+
+            <div className="border-t-2 border-[#0D0C0C] mt-3 pt-2.5 flex flex-col gap-1">
               {[
-                ['⚙', 'Settings', () => alert('Menu Settings on progress!')],
-                ['?', 'Help', () => alert('Menu Help on progress!')],
+                [<CgProfile />, 'Profile', () => navigate('/profile')],
+                // ['?', 'Feedback', () => alert('Menu Feedback on progress!')],
                 [
-                  '←',
+                  <RiLogoutCircleLine />,
                   'Logout',
                   () => {
                     handleLogout();
@@ -415,10 +409,8 @@ export default function ChatPage() {
                 <button
                   key={lb}
                   onClick={actionFn}
-                  className="side-btn">
-                  <span
-                    className="dm"
-                    style={{ fontSize: 12, color: '#888' }}>
+                  className="w-full flex items-center gap-2 py-1.5 px-2 text-[13px] font-bold font-dm text-[#0D0C0C] hover:bg-gray-100 transition-colors rounded text-left">
+                  <span className="font-dm text-[12px] text-gray-400 w-4">
                     {ic}
                   </span>
                   {lb}
@@ -428,192 +420,101 @@ export default function ChatPage() {
           </div>
         </aside>
 
-        {/* chat area */}
         {!selectedUser ? (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: C.paper,
-            }}>
-            <div
-              className="sg"
-              style={{ color: '#888', fontSize: 24, textAlign: 'center' }}>
-              <div style={{ fontSize: 64, marginBottom: 16 }}>💬</div>
-              Pilih user di samping untuk mulai ngobrol!
+          <div className="flex-1 flex flex-col items-center justify-center bg-[#E3DFF2]">
+            <div className="font-sg text-gray-400 text-[24px] text-center flex flex-col items-center">
+              <div className="text-6xl mb-4 animate-bounce">
+                <img
+                  src={LogoChato}
+                  width="200px"
+                  height="200px"
+                />
+              </div>
+              <p className="hero-desc font-dm text-[18px] md:text-[24px] text-black mb-10 leading-relaxed max-w-[650px] font-medium">
+                Choose Your Friend to Start Conversation!
+              </p>
             </div>
           </div>
         ) : (
-          <div
-            className="nb"
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              background: C.white,
-              overflow: 'hidden',
-            }}>
-            {/* chat header */}
-            <div
-              style={{
-                padding: '14px 18px',
-                borderBottom: `2px solid ${C.ink}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                flexShrink: 0,
-              }}>
+          <div className="flex-1 flex flex-col bg-white border-2 border-[#0D0C0C] shadow-[4px_4px_0_0_#0D0C0C] overflow-hidden rounded-sm">
+            <div className="p-3.5 px-4.5 border-b-2 border-[#0D0C0C] flex items-center gap-3 shrink-0 bg-white">
               <div
-                style={{
-                  width: 38,
-                  height: 38,
-                  background: selectedUser.bg,
-                  border: `2px solid ${C.ink}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: 'Space Grotesk',
-                  fontWeight: 700,
-                  fontSize: 12,
-                }}>
+                style={{ background: selectedUser.bg }}
+                className="w-9 h-9 border-2 border-[#0D0C0C] flex items-center justify-center font-sg font-bold text-[12px] text-[#0D0C0C]">
                 {selectedUser.ini}
               </div>
               <div>
-                <div
-                  className="sg"
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    letterSpacing: '-.01em',
-                  }}>
-                  {selectedUser.name}
+                <div className="font-sg text-[15px] font-bold tracking-tight text-[#0D0C0C]">
+                  {selectedUser.name} {selectedUser.flag}
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div className="font-sg text-[12px] tracking-tight text-[#0D0C0C]">
+                  {selectedUser.age} yrs, {selectedUser.gender}
+                </div>
+                <div className="flex items-center gap-1.5">
                   <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: '50%',
-                      background: selectedUser.on ? C.green : C.grayMid,
-                      display: 'inline-block',
-                    }}
+                    className={`w-[7px] h-[7px] rounded-full inline-block ${
+                      selectedUser.on ? 'bg-[#00C27C]' : 'bg-[#B8B2AA]'
+                    }`}
                   />
-                  <span
-                    className="dm"
-                    style={{ fontSize: 10, color: '#777' }}>
+                  <span className="font-dm text-[10px] font-bold text-gray-400">
                     {selectedUser.on ? 'ONLINE' : 'OFFLINE'}
                   </span>
                 </div>
               </div>
-              {/* KEBAB MENU (TITIK TIGA) */}
-              <div style={{ marginLeft: 'auto', position: 'relative' }}>
+
+              <div className="ml-auto relative">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  style={{
-                    background: isMenuOpen ? C.ink : C.white,
-                    color: isMenuOpen ? C.white : C.ink,
-                    border: `2px solid ${C.ink}`,
-                    padding: '4px 12px',
-                    fontWeight: '900',
-                    fontSize: '18px',
-                    cursor: 'pointer',
-                    boxShadow: '3px 3px 0px #000',
-                  }}
-                >
-                  ⋮
+                  className={`border-2 border-[#0D0C0C] px-3 py-0.5 font-black text-[18px] cursor-pointer shadow-[3px_3px_0_0_#0D0C0C] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none outline-none ${
+                    isMenuOpen
+                      ? 'bg-[#0D0C0C] text-white'
+                      : 'bg-white text-[#0D0C0C]'
+                  }`}>
+                  <CiMenuKebab />
                 </button>
 
-                {/* DROPDOWN MENU */}
                 {isMenuOpen && (
-                  <div
-                    className="nb"
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: '10px',
-                      background: C.white,
-                      border: `2px solid ${C.ink}`,
-                      boxShadow: '4px 4px 0px #000',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      width: '160px',
-                      zIndex: 10,
-                    }}
-                  >
-                    {/* Tombol Block/Unblock */}
+                  <div className="absolute top-full right-0 mt-2.5 bg-white border-2 border-[#0D0C0C] shadow-[4px_4px_0_0_#0D0C0C] flex flex-col w-[160px] z-10">
+                    {(() => {
+                      const isThisUserBlocked = (blockedUsers || [])
+                        .map((id) => id.toString())
+                        .includes(selectedUser?.id?.toString());
+
+                      return (
+                        <button
+                          onClick={() => {
+                            handleBlockUser(selectedUser.id);
+                            setIsMenuOpen(false);
+                          }}
+                          className={`p-3 border-none text-left font-bold text-[13px] cursor-pointer font-dm border-b-2 border-[#0D0C0C] hover:bg-gray-100 transition-colors ${
+                            isThisUserBlocked
+                              ? 'text-[#00C27C]'
+                              : 'text-red-500'
+                          }`}>
+                          {isThisUserBlocked ? 'Unblock User' : 'Block User'}
+                        </button>
+                      );
+                    })()}
+
                     <button
                       onClick={() => {
-                        if (blockedUsers.includes(selectedUser.id)) {
-                          setBlockedUsers((prev) => prev.filter((id) => id !== selectedUser.id));
-                        } else {
-                          setBlockedUsers((prev) => [...prev, selectedUser.id]);
-                        }
-                        setIsMenuOpen(false); // Tutup menu setelah diklik
+                        setIsAlertOpen(true);
+                        setIsMenuOpen(false);
                       }}
-                      style={{
-                        padding: '12px 14px',
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: `2px solid ${C.ink}`,
-                        textAlign: 'left',
-                        fontWeight: 'bold',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        color: blockedUsers.includes(selectedUser.id) ? C.green : '#FF3333',
-                      }}
-                      onMouseEnter={(e) => (e.target.style.background = '#F0F0F0')}
-                      onMouseLeave={(e) => (e.target.style.background = 'transparent')}
-                    >
-                      {blockedUsers.includes(selectedUser.id) ? '🔓 Unblock User' : '🚫 Block User'}
-                    </button>
-
-                    {/* Tombol Clear Chat */}
-                    <button
-                      onClick={handleDeleteMsgs}
-                      style={{
-                        padding: '12px 14px',
-                        background: 'transparent',
-                        border: 'none',
-                        textAlign: 'left',
-                        fontWeight: 'bold',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        color: '#FF3333',
-                      }}
-                      onMouseEnter={(e) => (e.target.style.background = '#F0F0F0')}
-                      onMouseLeave={(e) => (e.target.style.background = 'transparent')}
-                    >
-                      🗑️ Clear Chat
+                      className="p-3 bg-transparent border-none text-left font-bold text-[13px] cursor-pointer font-dm text-red-500 hover:bg-gray-100 transition-colors">
+                      Clear Chat
                     </button>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* messages */}
             <div
               ref={scrollRef}
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: 18,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 14,
-                background: '#F8F8F5',
-              }}>
+              className="flex-1 overflow-y-auto p-[18px] flex flex-col gap-[14px] bg-[#F8F8F5]">
               {msgs.length === 0 ? (
-                <div
-                  style={{
-                    textAlign: 'center',
-                    color: '#888',
-                    margin: 'auto',
-                  }}>
-                  Belum ada pesan. Ucapkan halo ke {selectedUser.name}! 👋
+                <div className="text-center text-gray-400 font-dm m-auto">
+                  Say Hello to, {selectedUser.name}!
                 </div>
               ) : (
                 msgs.map((m, idx) => {
@@ -623,90 +524,48 @@ export default function ChatPage() {
                     : m.isAi === true || m.isAi === 'true'
                       ? 'ai'
                       : 'them';
-                      if(fromType == 'ai' && m.receiverId !== myId) return null;
                   return (
                     <div
                       key={idx}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems:
-                          fromType === 'user' ? 'flex-end' : 'flex-start',
-                        gap: 6,
-                      }}>
+                      className={`flex flex-col gap-1.5 ${
+                        fromType === 'user' ? 'items-end' : 'items-start'
+                      }`}>
                       {fromType === 'them' && (
-                        <span
-                          className="dm"
-                          style={{
-                            fontSize: 10,
-                            color: '#888',
-                            paddingLeft: 2,
-                          }}>
+                        <span className="font-dm text-[10px] text-gray-400 pl-0.5 font-medium">
                           {selectedUser.name}
                         </span>
                       )}
                       {fromType === 'ai' && (
-                        <span
-                          className="dm"
-                          style={{
-                            fontSize: 10,
-                            color: C.blue,
-                            paddingLeft: 2,
-                          }}>
-                          ✏ AI CORRECTION
+                        <span className="font-dm text-[10px] text-[#FF4911] pl-0.5 font-bold tracking-wider uppercase">
+                          AI CORRECTION
                         </span>
                       )}
+
                       <div
-                        style={{
-                          padding: '10px 14px',
-                          border: `2px solid ${C.ink}`,
-                          boxShadow: `3px 3px 0 ${C.ink}`,
-                          maxWidth: '70%',
-                          background:
-                            fromType === 'user'
-                              ? C.blue
-                              : fromType === 'ai'
-                                ? C.white
-                                : C.bluePale,
-                          color: fromType === 'user' ? '#fff' : C.ink,
-                          fontSize: 14,
-                          lineHeight: 1.5,
-                        }}>
+                        className={`p-2.5 px-3.5 border-2 border-[#0D0C0C] shadow-[3px_3px_0_0_#0D0C0C] max-w-[70%] font-dm text-[14px] leading-relaxed ${
+                          fromType === 'user'
+                            ? 'bg-[#87CEEB] shadow-[3px_3px_0_0_#0D0C0C]'
+                            : fromType === 'ai'
+                              ? 'bg-white text-[#0D0C0C]'
+                              : 'bg-[#D6DCFF] text-[#0D0C0C]'
+                        }`}>
                         {fromType === 'ai' && m.aiText ? (
                           <span
-                            dangerouslySetInnerHTML={{ __html: m.aiText }}
+                            dangerouslySetInnerHTML={{
+                              __html: DOMPurify.sanitize(m.aiText),
+                            }}
                           />
                         ) : (
                           m.text
                         )}
                       </div>
+
                       {fromType === 'ai' && m.rule && (
-                        <div
-                          style={{
-                            border: `2px dashed ${C.ink}`,
-                            background: C.yellowDim,
-                            padding: '8px 12px',
-                            maxWidth: '70%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 3,
-                          }}>
-                          <div
-                            className="dm"
-                            style={{
-                              fontSize: 9,
-                              letterSpacing: '.1em',
-                              color: C.blue,
-                              fontWeight: 500,
-                            }}>
-                            ✏ GRAMMAR RULE
+                        <div className="border-2 border-dashed border-[#0D0C0C] bg-[#FFF9D4] p-2 px-3 max-w-[70%] flex flex-col gap-0.5 shadow-[2px_2px_0_0_#0D0C0C]">
+                          <div className="font-dm text-[9px] tracking-widest text-[#FF4911] font-bold uppercase">
+                            GRAMMAR RULE
                           </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: '#333',
-                              lineHeight: 1.4,
-                            }}>
+                          <div className="text-[12px] text-gray-800 font-dm leading-relaxed">
                             {m.rule}
                           </div>
                         </div>
@@ -717,30 +576,13 @@ export default function ChatPage() {
               )}
 
               {isTyping && (
-                <div
-                  className="dm"
-                  style={{
-                    fontSize: 12,
-                    color: '#888',
-                    fontStyle: 'italic',
-                    paddingLeft: 4,
-                    marginTop: -5,
-                  }}>
+                <div className="font-dm text-[12px] text-gray-400 italic pl-1 -mt-1.5">
                   {selectedUser.name} is typing...
                 </div>
               )}
             </div>
 
-            {/* input */}
-            <div
-              style={{
-                padding: '14px 16px',
-                borderTop: `2px solid ${C.ink}`,
-                display: 'flex',
-                gap: 10,
-                alignItems: 'flex-end',
-                flexShrink: 0,
-              }}>
+            <div className="p-3.5 px-4 border-t-2 border-[#0D0C0C] flex gap-2.5 items-end shrink-0 bg-white">
               <textarea
                 value={newMessage}
                 onChange={handleTyping}
@@ -752,23 +594,27 @@ export default function ChatPage() {
                 }}
                 placeholder="Type your message..."
                 rows={1}
-                className="inp"
-                style={{
-                  flex: 1,
-                  resize: 'none',
-                  minHeight: 44,
-                  maxHeight: 110,
-                  fontFamily: 'DM Sans',
-                  fontSize: 14,
-                }}
+                className="flex-1 resize-none min-h-[44px] max-h-[110px] font-dm text-[14px] p-2.5 border-2 border-[#0D0C0C] shadow-[3px_3px_0_0_#0D0C0C] bg-white text-[#0D0C0C] outline-none"
               />
+
               <Btn
                 sz="sm"
                 onClick={handleSend}
-                style={{ height: 44, flexShrink: 0 }}>
-                Send →
+                className="h-[44px] shrink-0">
+                Send
               </Btn>
             </div>
+
+            <NeoConfirmAlert
+              isOpen={isAlertOpen}
+              onClose={() => setIsAlertOpen(false)}
+              onConfirm={() => {
+                handleDeleteMsgs();
+                setIsAlertOpen(false);
+              }}
+              title="Clear Conversation?"
+              message={`This will be permanent clear your chat`}
+            />
           </div>
         )}
       </div>

@@ -4,9 +4,9 @@ import axios from 'axios';
 import { C } from '../components/Button.jsx';
 
 export default function VerifyEmail() {
-  const { token } = useParams(); // Ambil token dari URL
+  const { token } = useParams(); 
   const navigate = useNavigate();
-  const [status, setStatus] = useState('loading'); // loading, success, atau error
+  const [status, setStatus] = useState('loading'); 
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -44,28 +44,25 @@ export default function VerifyEmail() {
       }}>
         {status === 'loading' && (
           <div>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
-            <h2 className="sg">Memverifikasi Akun...</h2>
-            <p style={{ color: '#666', fontSize: '14px' }}>Tunggu sebentar ya, akun kamu lagi divalidasi.</p>
+            <h2 className="sg">Account Verification...</h2>
+            <p style={{ color: '#666', fontSize: '14px' }}>Please wait</p>
           </div>
         )}
 
         {status === 'success' && (
           <div>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎉</div>
-            <h2 className="sg" style={{ color: C.green }}>Verifikasi Sukses!</h2>
+            <h2 className="sg" style={{ color: C.green }}>Success Verification!</h2>
             <p style={{ color: '#333', fontSize: '14px', fontWeight: 'bold' }}>
-              Email kamu berhasil diverifikasi. Halaman bakal otomatis pindah ke Login dalam 3 detik...
+              Page will return back in 3 seconds....
             </p>
           </div>
         )}
 
         {status === 'error' && (
           <div>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
-            <h2 className="sg" style={{ color: '#FF3333' }}>Verifikasi Gagal!</h2>
+            <h2 className="sg" style={{ color: '#FF3333' }}>Failed Verification!</h2>
             <p style={{ color: '#666', fontSize: '14px' }}>
-              Link salah atau token sudah kedaluwarsa. Silakan coba register ulang atau hubungi bantuan.
+              Link or Token Expired. Please Repeat SignUp
             </p>
             <button 
               onClick={() => navigate('/login')}
@@ -79,7 +76,7 @@ export default function VerifyEmail() {
                 boxShadow: '2px 2px 0 #000'
               }}
             >
-              Kembali ke Login
+              Back to Login
             </button>
           </div>
         )}

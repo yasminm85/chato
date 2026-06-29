@@ -22,14 +22,15 @@ export const deleteMsgs = async (req, res) => {
     try {
         const { user1, user2} = req.params;
 
-        await messageModel.deleteMany({
+        const result = await messageModel.deleteMany({
             $or: [
                 {senderId: user1, receiverId: user2},
-                {senderId: user2, receiverId: user1}
+                {senderId: user2, receiverId: user1},
+                {senderId: 'ai-bot', receiverId: user1}
             ]
         });
 
-        res.status(200).json({message: "Successfully delete data message"});
+        res.status(200).json({message: "Successfully delete data message", result});
     } catch (error) {
         res.status(500).json({error: "Failed delete data message"});
     }

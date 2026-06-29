@@ -1,62 +1,23 @@
 import React from 'react';
-import Btn, { C } from '../components/Button.jsx';
 import { Link, useNavigate } from 'react-router-dom';
 
 export function Navbar() {
   const navigate = useNavigate();
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        background: C.paper,
-        borderBottom: `3px solid ${C.ink}`,
-      }}>
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          padding: '0 40px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          height: 60,
-        }}>
-        <button
-          className="sg"
-          onClick={() => navigate('/landing')}
-          style={{
-            fontSize: 20,
-            fontWeight: 800,
-            letterSpacing: '-.03em',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: C.ink,
-          }}>
+    <header className="sticky top-0 z-[100] bg-[#FDF2E9] border-b-4 border-black">
+      <div className="max-w-[1200px] mx-auto px-10 flex items-center justify-between h-[80px]">
+        <div 
+          onClick={() => navigate('/')} 
+          className="font-sg text-[32px] font-extrabold text-black cursor-pointer"
+        >
           Chato
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button
-            onClick={() => navigate('/login')}
-            className="sg"
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: C.ink,
-            }}>
-            Sign In
-          </button>
-          <Btn
-            sz="sm"
-            onClick={() => navigate('/signup')}>
-            Get Started →
-          </Btn>
         </div>
+        
+        <nav className="hidden md:flex items-center gap-10 font-sg font-bold text-[18px] text-black">
+          <a href="#about" className="hover:underline">About</a>
+          <a href="#how" className="hover:underline">How</a>
+          <a href="#features" className="hover:underline">Features</a>
+        </nav>
       </div>
     </header>
   );
@@ -64,47 +25,36 @@ export function Navbar() {
 
 export function Footer() {
   return (
-    <footer
-      style={{
-        background: C.ink,
-        borderTop: `3px solid ${C.ink}`,
-        padding: '40px 40px',
-      }}>
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 16,
-        }}>
-        <span
-          className="sg"
-          style={{ fontSize: 20, fontWeight: 800, color: C.paper }}>
+    <footer className="bg-black border-t-4 border-black py-10 px-10">
+      <div className="max-w-[1200px] mx-auto flex justify-between items-center flex-wrap gap-4">
+        <span className="font-sg text-[20px] font-extrabold text-[#FDF2E9]">
           Chato
         </span>
-        <span
-          className="dm"
-          style={{ fontSize: 12, color: '#666' }}>
-          © 2026 Chato. Fun conversations worldwide.
+        <span className="font-dm text-[12px] text-[#FDF2E9]">
+          © 2026 Chato{' '}
+          <a 
+            href="https://linkedin.com/in/nuryasminmb/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="hover:underline text-[#FDF2E9]"
+          >
+            Yasmin
+          </a>
         </span>
-        <nav style={{ display: 'flex', gap: 24 }}>
+        {/* Navigasi Footer (Sudah dikonversi ke Tailwind, tinggal diuncomment kalau mau dipakai) */}
+        {/* <nav className="flex gap-6">
           {['Privacy Policy', 'Terms of Service', 'Contact Support'].map(
             (t) => (
               <a
                 key={t}
                 href="#"
-                className="dm"
-                style={{ fontSize: 12, color: '#666' }}
-                onMouseOver={(e) => (e.target.style.color = C.yellow)}
-                onMouseOut={(e) => (e.target.style.color = '#666')}>
+                className="font-dm text-[12px] text-gray-500 hover:text-[#FFE04B] transition-colors duration-150"
+              >
                 {t}
               </a>
             ),
           )}
-        </nav>
+        </nav> */}
       </div>
     </footer>
   );
@@ -113,44 +63,20 @@ export function Footer() {
 export function AuthHeader({ altText, altAction, altLabel }) {
   const navigate = useNavigate();
   return (
-    <header style={{ borderBottom: `2px solid ${C.ink}`, padding: '0 40px' }}>
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          height: 54,
-        }}>
+    <header className="bg-white border-b-4 border-black px-10">
+      <div className="max-w-[1200px] mx-auto flex items-center justify-between h-[54px]">
         <Link
           to="/"
-          className="sg"
-          style={{
-            fontSize: 18,
-            fontWeight: 800,
-            letterSpacing: '-.03em',
-            textDecoration: 'none',
-            color: C.ink,
-          }}>
+          className="font-sg text-[18px] font-extrabold tracking-tight no-underline text-black"
+        >
           Chato
-        </Link>{' '}
-        <div
-          className="dm"
-          style={{ fontSize: 13, color: '#555' }}>
+        </Link>
+        <div className="font-dm text-[13px] text-[#555]">
           {altText}{' '}
           <button
             onClick={() => navigate(altAction)}
-            style={{
-              color: C.blue,
-              fontWeight: 700,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-              fontFamily: 'DM Mono',
-              fontSize: 13,
-            }}>
+            className="text-[#1933CC] font-bold bg-transparent border-none cursor-pointer underline font-mono text-[13px] hover:text-black transition-colors duration-150"
+          >
             {altLabel}
           </button>
         </div>
@@ -161,38 +87,22 @@ export function AuthHeader({ altText, altAction, altLabel }) {
 
 export function AuthFooter() {
   return (
-    <footer style={{ borderTop: `2px solid ${C.gray}`, padding: '20px 40px' }}>
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}>
-        <span
-          className="sg"
-          style={{ fontSize: 16, fontWeight: 700 }}>
+    <footer className="bg-white border-t-4 border-black py-5 px-10">
+      <div className="max-w-[1200px] mx-auto flex justify-between items-center flex-wrap gap-3">
+        <span className="font-sg text-[16px] font-bold text-black">
           Chato
         </span>
-        <span
-          className="dm"
-          style={{ fontSize: 11, color: '#999' }}>
-          © 2026 Chato. Connect and chat.
+        <span className="font-dm text-[12px] text-gray-400">
+          © 2026 Chato{' '}
+          <a 
+            href="https://linkedin.com/in/nuryasminmb/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="hover:underline text-gray-500"
+          >
+            Yasmin
+          </a>
         </span>
-        <nav style={{ display: 'flex', gap: 20 }}>
-          {['Privacy', 'Terms', 'Support'].map((t) => (
-            <a
-              key={t}
-              href="#"
-              className="dm"
-              style={{ fontSize: 11, color: '#999' }}>
-              {t}
-            </a>
-          ))}
-        </nav>
       </div>
     </footer>
   );

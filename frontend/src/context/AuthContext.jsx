@@ -8,12 +8,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('chat_user_profile');
-      if (!savedUser || savedUser === "undefined" || savedUser === "null") {
+      if (!savedUser || savedUser === 'undefined' || savedUser === 'null') {
         return null;
       }
       return JSON.parse(savedUser);
     } catch (error) {
-      console.error("Data profil rusak, reset user:", error);
+      console.error('Data profil rusak, reset user:', error);
       return null;
     }
   });
@@ -32,8 +32,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateGlobalUser = (newUserData) => {
+    const updatedProfile = { ...user, ...newUserData };
+    localStorage.setItem('chat_user_profile', JSON.stringify(updatedProfile));
+
+    setUser(updatedProfile);
+  };
+
   return (
-    <AuthContext.Provider value={{ token, user, handleLogin, handleLogout }}>
+    <AuthContext.Provider
+      value={{ token, user, handleLogin, handleLogout, updateGlobalUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiEye, FiEyeOff } from "react-icons/fi"
+import { FiEye, FiEyeOff } from "react-icons/fi";
 
 export function Field({
   label,
@@ -14,50 +14,44 @@ export function Field({
   const [showPassword, setShowPassword] = useState(false);
 
   const inputType = type === 'password' && showPassword ? 'text' : type;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div className="flex flex-col w-full">
       {label && (
         <label
-          className="fl-lbl"
-          htmlFor={id}>
+          className="block font-dm text-[14px] font-bold text-black mb-1.5"
+          htmlFor={id}
+        >
           {label}
         </label>
       )}
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+
+      <div className="relative flex items-center w-full">
+        
         {icon && (
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, opacity: .45, pointerEvents: "none" }}>
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[16px] opacity-45 pointer-events-none text-black">
             {icon}
           </span>
         )}
+
         <input
           id={id}
           type={inputType}
           placeholder={placeholder}
-          className={`inp${icon ? ' inp-icon' : ''}`}
           value={value}
           onChange={onChange}
           required={required}
+          className={`w-full py-3 px-3.5 border-2 border-black shadow-[3px_3px_0_0_#000] font-dm text-[14px] bg-white text-black outline-none focus:bg-[#DAF5F0] transition-colors duration-150
+            ${icon ? 'pl-10' : ''} 
+            ${type === 'password' ? 'pr-11' : ''}
+          `}
         />
+
         {type === "password" && (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            style={{
-              position: "absolute",
-              right: 14,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-              fontSize: 18,        
-              color: "#0D0C0C",
-              transition: "transform 0.1s ease"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.1)"}
-            onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer flex items-center justify-center p-0 text-[18px] text-black transition-transform duration-100 hover:scale-110 outline-none"
           >
             {showPassword ? <FiEyeOff /> : <FiEye />}
           </button>

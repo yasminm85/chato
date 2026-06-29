@@ -4,9 +4,15 @@ import { Field } from '../components/Fields.jsx';
 import { SelectField } from '../components/SelectField.jsx';
 import { AuthHeader, AuthFooter } from '../components/Layouts.jsx';
 import { useNavigate } from 'react-router-dom';
+import { gooeyToast } from 'goey-toast';
+import { getNames } from 'country-list';
+import { getCodeList } from 'country-list';
+import axios from 'axios';
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const countries = getNames();
+  const countryObject = getCodeList();
 
   const [formData, setFormData] = useState({
     username: '',
@@ -28,131 +34,97 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    console.log(formData);
-
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
-    if (!passwordRegex.test(formData.password)) {
-      setError('Password must 8 character, with capital, lower, and symbol.');
-      setLoading(false);
-      return;
-    }
 
     try {
-      const response = await fetch('http://localhost:4000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+      const response = await axios.post(
+        'http://localhost:4000/api/auth/register',
+        formData,
+      );
+
+      const data = response.data;
+
+      gooeyToast.success('Success', {
+        fillColor: '#FDF6ED',
+        preset: 'bouncy',
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Gagal mendaftar');
-      }
-
-      alert('Registrasi berhasil dilakukan');
       navigate('/login');
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Register Failed';
+      setError(errorMessage);
+      setTimeout(() => {
+        gooeyToast.error('Error', {
+          description: errorMessage,
+          fillColor: '#FFFFFF',
+          preset: 'bouncy',
+        });
+      }, 50);
     } finally {
       setLoading(false);
     }
   };
 
+  const dynamicCountryOptions = Object.entries(countryObject).map(
+    ([code, name]) => {
+      return {
+        v: code.toUpperCase(),
+        l: name.charAt(0).toUpperCase() + name.slice(1),
+      };
+    },
+  );
+  const sortedCountries = dynamicCountryOptions.sort((a, b) =>
+    a.l.localeCompare(b.l),
+  );
+  const finalCountryOptions = [
+    { v: '', l: 'Select your country', d: true },
+    ...sortedCountries,
+  ];
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: C.paper,
-      }}>
+    <div className="min-h-screen flex flex-col bg-[#FDF2E9]">
       <AuthHeader
         altText="Already have an account?"
         altAction="/login"
         altLabel="Sign In"
       />
-      <main
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 40,
-        }}>
-        <div
-          style={{
-            width: '100%',
-            maxWidth: 440,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 24,
-          }}>
+
+      <main className="flex-1 flex items-center justify-center p-10">
+        <div className="w-full max-w-[440px] flex flex-col gap-6">
           <div>
-            <div
-              className="dm"
-              style={{
-                fontSize: 11,
-                letterSpacing: '.08em',
-                color: '#888',
-                marginBottom: 6,
-              }}></div>
-            <h1
-              className="sg"
-              style={{
-                fontSize: 34,
-                fontWeight: 800,
-                letterSpacing: '-.03em',
-                marginBottom: 6,
-              }}>
+            <h1 className="font-sg text-[34px] font-extrabold tracking-tight mb-1.5 text-black">
               Join Chato
             </h1>
-            <p style={{ color: '#555', fontSize: 15 }}>
-              Begin your journey to connecting the world.
+            <p className="text-[#555] text-[15px] font-dm">
+              Begin your journey to connecting the world
             </p>
           </div>
-          <div
-            className="nb"
-            style={{ padding: 36, background: C.white }}>
-            <div
-              style={{
-                height: 5,
-                background: C.yellow,
-                margin: '-36px -36px 32px -36px',
-              }}
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+          <div className="p-9 bg-white border-4 border-black shadow-[6px_6px_0_0_#000]">
+            <div className="flex flex-col gap-[18px]">
               <form
                 onSubmit={handleRegister}
-                style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                {error && (
-                  <div
-                    style={{
-                      color: 'red',
-                      fontSize: 13,
-                      background: '#ffe6e6',
-                      padding: 10,
-                      borderRadius: 4,
-                    }}>
-                    {error}
-                  </div>
-                )}
+                className="flex flex-col gap-[18px]">
+
                 <Field
                   label="Full Name"
                   id="username"
-                  placeholder="Jane Doe"
+                  placeholder="Budi Dan"
                   value={formData.username}
                   onChange={handleChange}
                 />
+
                 <Field
                   label="Email Address"
                   type="email"
                   id="email"
-                  placeholder="jane.doe@example.com"
+                  placeholder="budidan@example.com"
                   value={formData.email}
                   onChange={handleChange}
                 />
+
                 <Field
                   label="Password"
                   type="password"
@@ -161,6 +133,7 @@ export default function SignupPage() {
                   value={formData.password}
                   onChange={handleChange}
                 />
+
                 <Field
                   label="Age"
                   type="number"
@@ -169,6 +142,7 @@ export default function SignupPage() {
                   value={formData.age}
                   onChange={handleChange}
                 />
+
                 <SelectField
                   label="Gender"
                   id="gender"
@@ -180,62 +154,38 @@ export default function SignupPage() {
                     { v: 'female', l: 'Female' },
                   ]}
                 />
+
                 <SelectField
                   label="Country"
                   id="country"
                   value={formData.country}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    border: '2px solid #000',
-                    boxShadow: '3px 3px 0 #000',
-                    fontFamily: 'DM Sans',
-                    fontSize: 14,
-                    background: '#FFF',
-                    cursor: 'pointer',
-                    outline: 'none',
-                  }}
-                  opts={[
-                    { v: '', l: 'Select your country', d: true },
-                    { v: 'ID', l: '🇮🇩 Indonesia' },
-                    { v: 'JP', l: '🇯🇵 Japan' },
-                    { v: 'SG', l: '🇸🇬 Singapore' },
-                    { v: 'US', l: '🇺🇸 US' },
-                    { v: 'MY', l: '🇲🇾 Malaysia' },
-                  ]}
+                  opts={finalCountryOptions}
                 />
 
-                <div style={{ paddingTop: 8 }}>
+                <div className="pt-2">
                   <Btn
                     type="submit"
                     full
                     disabled={loading}>
-                    {loading ? 'Creating Account...' : 'Create Account →'}
-                  </Btn>{' '}
+                    {loading ? 'Creating Account...' : 'Create Account'}
+                  </Btn>
                 </div>
               </form>
             </div>
           </div>
-          <p style={{ textAlign: 'center', fontSize: 14, color: '#555' }}>
+
+          <p className="text-center text-[14px] text-[#555] font-dm">
             Already have an account?{' '}
             <button
               onClick={() => navigate('/login')}
-              style={{
-                color: C.blue,
-                fontWeight: 700,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-                fontFamily: 'DM Mono',
-                fontSize: 13,
-              }}>
+              className="text-[#1933CC] font-bold bg-transparent border-none cursor-pointer underline font-mono text-[13px] hover:text-black transition-colors duration-150">
               Sign in here
             </button>
           </p>
         </div>
       </main>
+
       <AuthFooter />
     </div>
   );

@@ -6,6 +6,7 @@ import { AuthHeader, AuthFooter } from '../components/Layouts.jsx';
 import { ErrorMsg } from "../components/reset-password/ErrorMsg.jsx";
 import { Header } from "../components/reset-password/Header.jsx";
 import { ProgressBar } from "../components/reset-password/Progress";
+import axios from "axios";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -31,12 +32,9 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/api/auth/send-otp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed Send OTP");
+      const response = await axios.post('http://localhost:4000/api/auth/send-otp', {email});
+      const data = response.data;
+      
       
       setMsg("OTP Send To Your Email!");
       setIsEmailSent(true);
@@ -56,19 +54,17 @@ export default function ResetPasswordPage() {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:4000/api/auth/verify-otp', {
-        method: 'POST',
-        headers: {'Content-Type' : 'application/json'},
-        body: JSON.stringify({email, otp: otpCode})
+      const response = await axios.post('http://localhost:4000/api/auth/verify-otp', {
+        email,
+        otp: otpCode
       });
 
-      const data = await response.json();
-      if(!response.ok) throw new Error(data.message || "Otp Failed Send");
+      const data = response.data;
 
       setMsg('Otp Verified');
       setIsOtpSubmitted(true);
     } catch (error) {
-        setError(error.message);
+        setError('Otp Invalid', error.message);
         setOtp(new Array(6).fill(""));
         inputRefs.current[0]?.focus();
     } finally {
@@ -89,12 +85,10 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/api/auth/reset', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp: otp.join(""), newPassword })
+      const response = await axios.post('http://localhost:4000/api/auth/reset', {
+        email, otp: otp.join(""), newPassword
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to reset password");
+      const data = response.data;
 
       setMsg("Password has been changed! Turn to login...");
       setTimeout(() => navigate("/login"), 2000);
@@ -140,7 +134,7 @@ export default function ResetPasswordPage() {
             {!isEmailSent && (
               <form onSubmit={handleEmailSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 <Field label="Email Address" type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hello@example.com" />
-                <Btn full type="submit" disabled={loading}>{loading ? 'Sending OTP...' : 'Send OTP Code →'}</Btn>
+                <Btn full type="submit" disabled={loading}>{loading ? 'Sending OTP...' : 'Send OTP Code'}</Btn>
               </form>
             )}
 
@@ -158,8 +152,8 @@ export default function ResetPasswordPage() {
                     />
                   ))}
                 </div>
-                <Btn full type="submit" disabled={loading}>{loading ? 'Verifying...' : 'Verify OTP →'}</Btn>
-                <Btn full v="ghost" type="button" onClick={() => { setIsEmailSent(false); setOtp(new Array(6).fill("")); setError(''); setMsg(''); }}>← Back</Btn>
+                <Btn full type="submit" disabled={loading}>{loading ? 'Verifying...' : 'Verify OTP'}</Btn>
+                <Btn full v="ghost" type="button" onClick={() => { setIsEmailSent(false); setOtp(new Array(6).fill("")); setError(''); setMsg(''); }}>Back</Btn>
               </form>
             )}
 
@@ -167,8 +161,8 @@ export default function ResetPasswordPage() {
               <form onSubmit={handlePasswordSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 <Field label="New Password" type="password" id="newPw" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" />
                 <Field label="Confirm Password" type="password" id="confPw" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" />
-                <Btn full type="submit" disabled={loading}>{loading ? 'Updating...' : 'Update Password →'}</Btn>
-                <Btn full v="ghost" type="button" onClick={() => { setIsOtpSubmitted(false); setError(''); setMsg(''); }}>← Back</Btn>
+                <Btn full type="submit" disabled={loading}>{loading ? 'Updating...' : 'Update Password'}</Btn>
+                <Btn full v="ghost" type="button" onClick={() => { setIsOtpSubmitted(false); setError(''); setMsg(''); }}>Back</Btn>
               </form>
             )}
 

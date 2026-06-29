@@ -1,59 +1,70 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema(
+  {
     email: {
-        type: String,
-        required: true,
-        unique: true,
+      type: String,
+      required: true,
+      unique: true,
     },
     username: {
-        type: String,
-        required: true,
-        trim: true,
+      type: String,
+      required: true,
+      trim: true,
     },
     password: {
-        type: String,
-        required: true,
-        unique: true
+      type: String,
+      required: true,
+      unique: true,
     },
     age: {
-        type: Number,
-        default: null
+      type: Number,
+      default: null,
     },
     gender: {
-        type: String,
-        enum: ['male', 'female', null],
-        default: null
+      type: String,
+      enum: ['male', 'female', null],
+      default: null,
     },
     country: {
-        type: String,
-        default: "ID"
-    },
-    googleId: {
-        type: String,
-        default: null
-    },
-    picture: {
-        type: String,
-        default: null
+      type: String,
+      default: 'ID',
     },
     resetOtp: {
-        type: String,
-        default: ''
+      type: String,
+      default: '',
     },
     resetOtpExpireAt: {
-        type: Number,
-        default: 0
+      type: Number,
+      default: 0,
     },
     isVerified: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
     },
     verificationToken: {
-        type: String
-    }
-    
-}, {timestamps: true});
+      type: String,
+    },
+    aiUsageCount: {
+      type: Number,
+      default: 0,
+    },
+    lastAiUsage: {
+      type: String,
+      default: '',
+    },
+    blockedUser: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+      ],
+      default: [],
+    },
+  },
+  { timestamps: true },
+);
 
 const userModel = mongoose.models.user || mongoose.model('users', userSchema);
 

@@ -5,15 +5,16 @@ import axios from 'axios';
 import transporter from '../config/nodemailer.js';
 import crypto from 'crypto';
 import sendVerificationEmail from '../config/emailVerif.js';
+import sendOtp from '../config/nodemailer.js';
 
 export const users = async (req, res) => {
-    try {
-        const getUser = await userModel.find().select('-password');
-        res.status(200).json({message: "Get all user", getUser});
-    } catch (error) {
-        res.status(500).json({message: "Failed to get users"});
-    }
-}
+  try {
+    const getUser = await userModel.find().select('-password -email -verificationToken -__v -blockedUser');
+    res.status(200).json({ message: 'Get all user', getUser });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to get users' });
+  }
+};
 
 export const register = async (req, res) => {
   try {
@@ -31,9 +32,12 @@ export const register = async (req, res) => {
 
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
-        message:
-          'Password must 8 character, with capital, lower, and symbol.',
+        message: 'Password must 8 character and include a mix of uppercase, lowercase, and numeric characters',
       });
+    }
+
+    if(!email || !username) {
+      return res.status(400).json({message: 'Please input email or username'});
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -47,7 +51,7 @@ export const register = async (req, res) => {
       age,
       gender,
       country,
-      verificationToken
+      verificationToken,
     });
 
     await newUser.save();
@@ -69,12 +73,13 @@ export const login = async (req, res) => {
     return res.status(400).json({ message: 'Please input email and password' });
   }
 
-
   try {
     const user = await userModel.findOne({ email });
 
-    if(!user.isVerified) {
-      res.status(401).json({error: "Email not verified!"});
+    if (!user.isVerified) {
+      res
+        .status(401)
+        .json({ error: 'Email not verified, please check your email!' });
     }
     if (!user) {
       res.status(400).json({ message: 'User not found' });
@@ -89,7 +94,7 @@ export const login = async (req, res) => {
     const token = jwt.sign(
       { id: user.id, username: user.username },
       process.env.JWT_SECRET,
-      { expiresIn: '30m' },
+      { expiresIn: '1d' },
     );
 
     res.cookie('token', token, {
@@ -108,7 +113,7 @@ export const login = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Login Successfully' });
+    return res.status(500).json({ message: 'Login Failed' });
   }
 };
 
@@ -165,7 +170,7 @@ export const googleLogin = async (req, res) => {
       },
       process.env.JWT_SECRET,
       {
-        expiresIn: '30m',
+        expiresIn: '1d',
       },
     );
 
@@ -183,6 +188,49 @@ export const googleLogin = async (req, res) => {
   } catch (error) {
     console.error('Error Google Login Backend:', error.message);
     res.status(500).json({ message: 'Failed Authentication using google' });
+  }
+};
+
+export const getDataById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const findUser = await userModel.findById(id);
+
+    if (!findUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json({ user: findUser });
+  } catch (error) {
+    console.error('Failed to get Data By ID', error);
+    res.status(500).json({ message: 'Error get data' });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  const { id } = req.params;
+
+  const { username, age, gender, country } = req.body;
+
+  try {
+    const update = await userModel.findByIdAndUpdate(
+      id,
+      {
+        username,
+        age,
+        gender,
+        country,
+      },
+      { new: true },
+    );
+
+    if (!update) {
+      return res.status(404).json({ message: 'User tidak ditemukan!' });
+    }
+    res.status(200).json({ message: 'Update Successfully', user: update });
+  } catch (error) {
+    console.error('Error cant update', error);
+    res.status(500).json({ message: 'Failed to update data' });
   }
 };
 
@@ -206,25 +254,20 @@ export const sendResetOtp = async (req, res) => {
 
     await user.save();
 
-    const mailOption = {
-      from: process.env.SENDER_EMAIL,
-      to: user.email,
-      subject: 'Password Reset OTP',
-      text: `Your OTP for resetting your password is ${otp}. Use this OTP to proceed with resetting your password`,
-    };
+    await sendOtp(email, otp);
 
-    await transporter.sendMail(mailOption);
-
-    return res.json({ success: true, message: 'OTP sent to your email' });
+    return res
+      .status(200)
+      .json({ success: true, message: 'OTP sent to your email' });
   } catch (error) {
-    return res.json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export const verifyOtp = async(req, res) => {
-    const { email, otp } = req.body;
+export const verifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
 
-    if (!otp || !email ) {
+  if (!otp || !email) {
     return res.status(400).json({
       success: false,
       message: 'OTP and Email are required',
@@ -234,7 +277,9 @@ export const verifyOtp = async(req, res) => {
   try {
     const user = await userModel.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: 'User not found' });
     }
 
     if (user.resetOtp === '' || user.resetOtp !== otp) {
@@ -250,10 +295,9 @@ export const verifyOtp = async(req, res) => {
       message: 'OTP verified successfully',
     });
   } catch (error) {
-return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
-
-}
+};
 
 export const resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
@@ -284,8 +328,7 @@ export const resetPassword = async (req, res) => {
 
     if (!passwordRegex.test(newPassword)) {
       return res.status(400).json({
-        message:
-          'Password must 8 character, with capital, lower, and symbol.',
+        message: 'Password must 8 character, with capital, lower, and symbol.',
       });
     }
 
@@ -310,18 +353,68 @@ export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
 
-    const user = await userModel.findOne({verificationToken: token});
+    const user = await userModel.findOne({ verificationToken: token });
 
-    if(!user) {
-      return res.status(400).json({ error: "Token is not valid"});
+    if (!user) {
+      return res.status(400).json({ error: 'Token is not valid' });
     }
 
     user.isVerified = true;
     user.verificationToken = undefined;
     await user.save();
 
-    res.status(200).json({message: "Email successfully verified"});
+    res.status(200).json({ message: 'Email successfully verified' });
   } catch (error) {
-     res.status(500).json({error: "Failed to verification Email"})
+    res.status(500).json({ error: 'Failed to verification Email' });
   }
+};
+
+export const blockUser = async (req, res) => {
+  try {
+    const myUserId = req.user.id || req.user._id;
+    const { targetedId } = req.body;
+
+    const myUser = await userModel.findById(myUserId).lean();
+    if (!myUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'User tidak ditemukan' });
+    }
+
+    const isAlreadyBlocked = (myUser.blockedUser || [])
+      .map((id) => id.toString())
+      .includes(targetedId.toString());
+
+    if (isAlreadyBlocked) {
+  const updated = await userModel.findByIdAndUpdate(
+    myUserId,
+    { $pull: { blockedUser: targetedId } },
+    { returnDocument: 'after' } 
+  );
+  return res.status(200).json({
+    success: true,
+    message: 'User unblocked successfully',
+    blockedUser: updated.blockedUser, 
+  });
+} else {
+  const updated = await userModel.findByIdAndUpdate(
+    myUserId,
+    { $addToSet: { blockedUser: targetedId } },
+    { returnDocument: 'after' } 
+  );
+  return res.status(200).json({
+    success: true,
+    message: 'User blocked successfully',
+    blockedUser: updated.blockedUser, 
+  });
 }
+  } catch (error) {
+    console.error('ERROR DI BACKEND CONTROLLER:', error);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        error: 'Server error gagal memproses block/unblock',
+      });
+  }
+};

@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Btn, { C } from '../components/Button.jsx';
 import { Field } from '../components/Fields.jsx';
 import { AuthHeader, AuthFooter } from '../components/Layouts.jsx';
 import { FaGoogle } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
+import { replace, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { useContext } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { gooeyToast } from 'goey-toast';
 import axios from 'axios';
-
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -35,26 +34,29 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:4000/api/auth/login', formData);
+      const response = await axios.post(
+        'http://localhost:4000/api/auth/login',
+        formData,
+      );
 
       const data = response.data;
 
       handleLogin(data.token, data.user);
       gooeyToast.success('Success', {
-        fillColor: '#FDF6ED',
+        fillColor: '#FFFFFF',
         preset: 'bouncy',
       });
-      navigate('/chat');
+      navigate('/chat', { replace: true });
     } catch (err) {
       const errorMessage =
         err.response?.data?.error ||
         err.response?.data?.message ||
         err.message ||
-        'Gagal login.';
+        'Login Failed.';
       setError(errorMessage);
       gooeyToast.error('Error', {
         description: errorMessage,
-        fillColor: '#FDF6ED',
+        fillColor: '#FFFFFF',
         preset: 'bouncy',
       });
     } finally {
@@ -68,100 +70,69 @@ export default function LoginPage() {
       setError('');
 
       try {
-        const response = await fetch(
+        const response = await axios.post(
           'http://localhost:4000/api/auth/googleLogin',
           {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ access_token: tokenResponse.access_token }),
+            access_token: tokenResponse.access_token,
           },
         );
 
-        const data = await response.json();
-
-        if (!response.ok)
-          throw new Error(data.message || 'Failed Login With Google');
+        const data = response.data;
 
         const userToken = data.token || 'dummy-token';
         handleLogin(userToken, data.user);
-
-        navigate('/chat');
+        gooeyToast.success('Success', {
+          fillColor: '#FDF6ED',
+          preset: 'bouncy',
+        });
+        navigate('/chat', { replace: true });
       } catch (error) {
-        setError(error.message);
+        const errorMessage =
+          err.response?.data?.error ||
+          err.response?.data?.message ||
+          err.message ||
+          'Login Failed.';
+        setError(errorMessage);
+        gooeyToast.error('Error', {
+          description: errorMessage,
+          fillColor: '#FDF6ED',
+          preset: 'bouncy',
+        });
       } finally {
         setLoading(false);
       }
     },
     onError: () => {
-      setError('Login using goole is canceled ');
+      setError('Login using google is canceled ');
     },
   });
+
+  
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: C.paper,
-      }}>
+    <div className="min-h-screen flex flex-col bg-[#FDF2E9]">
       <AuthHeader
         altText="Don't have an account?"
         altAction="/signup"
         altLabel="Sign Up"
       />
-      <main
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 40,
-        }}>
-        <div
-          style={{
-            width: '100%',
-            maxWidth: 440,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 24,
-          }}>
+
+      <main className="flex-1 flex items-center justify-center p-10">
+        <div className="w-full max-w-[440px] flex flex-col gap-6">
           <div>
-            <div
-              className="dm"
-              style={{
-                fontSize: 11,
-                letterSpacing: '.08em',
-                color: '#888',
-                marginBottom: 6,
-              }}></div>
-            <h1
-              className="sg"
-              style={{
-                fontSize: 34,
-                fontWeight: 800,
-                letterSpacing: '-.03em',
-                marginBottom: 6,
-              }}>
-              Welcome back! 👋
+            <h1 className="font-sg text-[34px] font-extrabold tracking-tight mb-1.5 text-black">
+              Welcome back!
             </h1>
-            <p style={{ color: '#555', fontSize: 15 }}>
+            <p className="text-[#555] text-[15px] font-dm">
               Ready to jump back into the conversation?
             </p>
           </div>
-          <div
-            className="nb"
-            style={{ padding: 36, background: C.white }}>
-            <div
-              style={{
-                height: 5,
-                background: C.blue,
-                margin: '-36px -36px 32px -36px',
-              }}
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          <div className="p-9 bg-white border-4 border-black shadow-[6px_6px_0_0_#000]">
+            <div className="flex flex-col gap-5">
               <form
                 onSubmit={handleManualLogin}
-                style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                className="flex flex-col gap-[18px]">
                 <Field
                   label="Email Address"
                   type="email"
@@ -170,6 +141,7 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                 />
+
                 <Field
                   label="Password"
                   type="password"
@@ -178,58 +150,52 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                 />
-                <div style={{ textAlign: 'right' }}>
+
+                <div className="text-right">
                   <a
                     href="/reset-password"
-                    className="dm"
-                    style={{
-                      fontSize: 12,
-                      color: C.blue,
-                      textDecoration: 'underline',
-                    }}>
+                    className="font-dm text-[12px] text-[#1933CC] underline hover:text-black transition-colors duration-150">
                     Forgot Password?
                   </a>
                 </div>
+
                 <Btn
                   full
                   type="submit"
                   disabled={loading}>
-                  {loading ? 'Signing In...' : 'Sign In →'}
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </Btn>
               </form>
 
-              <div style={{ borderTop: `2px solid ${C.ink}`, paddingTop: 20 }}>
+              <div className="border-t-2 border-black pt-5 mt-2">
                 <Btn
                   v="ghost"
                   full
                   type="button"
                   onClick={() => handleLoginGoogle()}
                   disabled={loading}>
-                  <FaGoogle style={{ color: '#4285F4', fontSize: 16 }} />
-                  {loading ? 'Connecting...' : 'Continue with Google'}
+                  <div className="flex items-center justify-center gap-2">
+                    <FaGoogle className="text-[#4285F4] text-[16px]" />
+                    <span>
+                      {loading ? 'Connecting...' : 'Continue with Google'}
+                    </span>
+                  </div>
                 </Btn>
               </div>
             </div>
           </div>
-          <p style={{ textAlign: 'center', fontSize: 14, color: '#555' }}>
+
+          <p className="text-center text-[14px] text-[#555] font-dm">
             Don't have an account?{' '}
             <button
               onClick={() => navigate('/signup')}
-              style={{
-                color: C.blue,
-                fontWeight: 700,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-                fontFamily: 'DM Mono',
-                fontSize: 13,
-              }}>
+              className="text-[#1933CC] font-bold bg-transparent border-none cursor-pointer underline font-mono text-[13px] hover:text-black transition-colors duration-150">
               Sign Up
             </button>
           </p>
         </div>
       </main>
+
       <AuthFooter />
     </div>
   );
