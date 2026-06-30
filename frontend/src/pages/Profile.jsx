@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { useContext } from 'react';
 import { getCodeList } from 'country-list';
-import axios from 'axios';
+import api from '../api/api.js';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -30,8 +30,8 @@ export default function Profile() {
       if (!myId) return;
 
       try {
-        const response = await axios.get(
-          `http://localhost:4000/api/auth/getUser/${myId}`,
+        const response = await api.get(
+          `/api/auth/getUser/${myId}`,
         );
         const userData = response.data.user || response.data;
 
@@ -62,8 +62,8 @@ export default function Profile() {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await axios.put(
-        `http://localhost:4000/api/auth/update/${myId}`,
+      const response = await api.put(
+        `/api/auth/update/${myId}`,
         formData,
       );
 

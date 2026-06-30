@@ -6,7 +6,7 @@ import { AuthHeader, AuthFooter } from '../components/Layouts.jsx';
 import { ErrorMsg } from "../components/reset-password/ErrorMsg.jsx";
 import { Header } from "../components/reset-password/Header.jsx";
 import { ProgressBar } from "../components/reset-password/Progress";
-import axios from "axios";
+import api from "../api/api.js";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:4000/api/auth/send-otp', {email});
+      const response = await api.post('/api/auth/send-otp', {email});
       const data = response.data;
       
       
@@ -54,7 +54,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
     
     try {
-      const response = await axios.post('http://localhost:4000/api/auth/verify-otp', {
+      const response = await api.post('/api/auth/verify-otp', {
         email,
         otp: otpCode
       });
@@ -85,7 +85,7 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:4000/api/auth/reset', {
+      const response = await api.post('/api/auth/reset', {
         email, otp: otp.join(""), newPassword
       });
       const data = response.data;

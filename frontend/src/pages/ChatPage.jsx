@@ -5,13 +5,13 @@ import { AuthContext } from '../context/AuthContext.jsx';
 import { useContext } from 'react';
 import { io } from 'socket.io-client';
 import LogoChato from '../assets/landingpage/logo_chato.svg';
-import axios from 'axios';
 import { CgProfile } from 'react-icons/cg';
 import { RiLogoutCircleLine } from 'react-icons/ri';
 import { CiMenuKebab } from 'react-icons/ci';
 import { gooeyToast } from 'goey-toast';
 import { NeoConfirmAlert } from '../components/Alert.jsx';
 import DOMPurify from 'dompurify';
+import api from '../api/api.js';
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -47,8 +47,8 @@ export default function ChatPage() {
   useEffect(() => {
     const fetchAllUsers = async () => {
       try {
-        const response = await axios.get(
-          'http://localhost:4000/api/auth/users',
+        const response = await api.get(
+          '/api/auth/users',
         );
         const data = response.data;
         setAllUsers(data.getUser);
@@ -65,8 +65,8 @@ export default function ChatPage() {
       if (!myId) return;
 
       try {
-        const response = await axios.get(
-          `http://localhost:4000/api/auth/getUser/${myId}`,
+        const response = await api.get(
+          `/api/auth/getUser/${myId}`,
         );
         const userData = response.data.user || response.data;
 
@@ -89,8 +89,8 @@ export default function ChatPage() {
       if (!myId || !selectedUser) return;
 
       try {
-        const response = await axios.get(
-          `http://localhost:4000/api/msgs/${myId}/${selectedUser.id}`,
+        const response = await api.get(
+          `/api/msgs/${myId}/${selectedUser.id}`,
         );
 
         setMsgs(response.data);
@@ -103,7 +103,7 @@ export default function ChatPage() {
   }, [selectedUser]);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:4000', {
+    const newSocket = io(api, {
       auth: {
         token: localStorage.getItem('token'),
       },
@@ -188,8 +188,8 @@ export default function ChatPage() {
     const fetchBlockedUsers = async () => {
       if (!myId) return;
       try {
-        const response = await axios.get(
-          `http://localhost:4000/api/auth/getUser/${myId}`,
+        const response = await api.get(
+          `/api/auth/getUser/${myId}`,
         );
         const userData = response.data.user || response.data;
 
@@ -253,8 +253,8 @@ export default function ChatPage() {
 
   const handleDeleteMsgs = async () => {
     try {
-      const response = await axios.delete(
-        `http://localhost:4000/api/msgs/${myId}/${selectedUser.id}`,
+      const response = await api.delete(
+        `/api/msgs/${myId}/${selectedUser.id}`,
       );
       setMsgs([]);
       setIsMenuOpen(false);
@@ -270,8 +270,8 @@ export default function ChatPage() {
       .includes(targetIdStr);
 
     try {
-      await axios.post(
-        'http://localhost:4000/api/auth/block',
+      await api.post(
+        '/api/auth/block',
         { targetedId: targetUserId },
         { headers: { Authorization: `Bearer ${token}` } },
       );

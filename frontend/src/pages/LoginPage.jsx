@@ -8,7 +8,7 @@ import { AuthContext } from '../context/AuthContext.jsx';
 import { useContext } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { gooeyToast } from 'goey-toast';
-import axios from 'axios';
+import api from '../api/api.js';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -34,8 +34,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        'http://localhost:4000/api/auth/login',
+      const response = await api.post(
+        '/api/auth/login',
         formData,
       );
 
@@ -70,8 +70,8 @@ export default function LoginPage() {
       setError('');
 
       try {
-        const response = await axios.post(
-          'http://localhost:4000/api/auth/googleLogin',
+        const response = await api.post(
+          '/api/auth/googleLogin',
           {
             access_token: tokenResponse.access_token,
           },

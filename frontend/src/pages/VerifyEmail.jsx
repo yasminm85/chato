@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { C } from '../components/Button.jsx';
+import api from '../api/api.js';
 
 export default function VerifyEmail() {
   const { token } = useParams(); 
@@ -11,7 +12,7 @@ export default function VerifyEmail() {
   useEffect(() => {
     const verifyToken = async () => {
       try {
-        await axios.get(`http://localhost:4000/api/auth/verify-email/${token}`);
+        await api.get(`/api/auth/verify-email/${token}`);
         setStatus('success');
         
         setTimeout(() => {

@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { gooeyToast } from 'goey-toast';
 import { getNames } from 'country-list';
 import { getCodeList } from 'country-list';
-import axios from 'axios';
+import api from '../api/api.js';
 
 export default function SignUpPage() {
   const navigate = useNavigate();
@@ -36,8 +36,8 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        'http://localhost:4000/api/auth/register',
+      const response = await api.post(
+        '/api/auth/register',
         formData,
       );
 
