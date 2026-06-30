@@ -15,7 +15,10 @@ const app = express();
 const port = process.env.PORT || 4000;
 connectDB();
 
-const allowedOrigins = ['http://localhost:5173'];
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://chato.sbs'
+];
 
 app.use((req, res, next) => {
     Object.defineProperty(req, 'query', {
