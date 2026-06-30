@@ -105,7 +105,7 @@ export default function ChatPage() {
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_URL, {
       auth: {
-        token: localStorage.getItem('token'),
+        token: localStorage.getItem('chat_token'),
       },
     });
     setSocket(newSocket);
