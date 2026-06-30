@@ -88,9 +88,9 @@ export default function LoginPage() {
         navigate('/chat', { replace: true });
       } catch (error) {
         const errorMessage =
-          err.response?.data?.error ||
-          err.response?.data?.message ||
-          err.message ||
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          error.message ||
           'Login Failed.';
         setError(errorMessage);
         gooeyToast.error('Error', {
