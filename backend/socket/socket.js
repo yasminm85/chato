@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { analyzeGrammar } from '../utils/aiService.js';
 import messageModel from '../model/Message.js';
 import userModel from '../model/User.js';
+import jwt from 'jsonwebtoken';
 
 let io;
 
@@ -20,7 +21,7 @@ export const initSocket = (server) => {
       socket.handshake.auth?.token || socket.handshake.headers?.token;
 
     if (!token) {
-      return next(new Error('Authentication error: Token missing, brok!'));
+      return next(new Error('Authentication error: Token missing'));
     }
 
     try {
